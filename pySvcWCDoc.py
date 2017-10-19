@@ -4,6 +4,7 @@ import win32event
 import configparser
 import os
 import inspect
+import logging
 from PyQt4.QtCore import QDir
 
 class PySvcWCDoc(win32serviceutil.ServiceFramework):
@@ -14,7 +15,8 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     # this text shows up as the description in the SCM
     _svc_description_ = "This service, written in Python, copies WC files to DocRec"
 
-    config = configparser.ConfigParser()
+    _config = configparser.ConfigParser()
+    _path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -26,15 +28,15 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         import servicemanager
 
-        self.config.read(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/pySvcWCDoc.ini')
-        p = QDir.toNativeSeparators(self.config.get("default", "path"))
+        self._config.read(self._path+'/pySvcWCDoc.ini')
+        p = self._config.get("default", "path")
 
         f = open(p, 'w+')
         rc = None
 
         # if the stop event hasn't been fired keep looping
         while rc != win32event.WAIT_OBJECT_0:
-            f.write('TEST DATA\n')
+            f.write(p + '\n')
             f.flush()
             # block for 5 seconds and listen for a stop event
             rc = win32event.WaitForSingleObject(self.hWaitStop, 5000)
