@@ -1,7 +1,10 @@
 import win32service
 import win32serviceutil
 import win32event
-
+import configparser
+import os
+import inspect
+from PyQt4.QtCore import QDir
 
 class PySvcWCDoc(win32serviceutil.ServiceFramework):
     # you can NET START/STOP the service by the following name
@@ -10,6 +13,8 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     _svc_display_name_ = "Python Service - WC Doc"
     # this text shows up as the description in the SCM
     _svc_description_ = "This service, written in Python, copies WC files to DocRec"
+
+    config = configparser.ConfigParser()
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -21,7 +26,10 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         import servicemanager
 
-        f = open('C:/Users/wguo/PycharmProjects/pySvcWCDoc/test.dat', 'w+')
+        self.config.read(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))+'/pySvcWCDoc.ini')
+        p = QDir.toNativeSeparators(self.config.get("default", "path"))
+
+        f = open(p, 'w+')
         rc = None
 
         # if the stop event hasn't been fired keep looping
