@@ -3,14 +3,13 @@ import win32serviceutil
 import win32event
 
 
-class PySvc(win32serviceutil.ServiceFramework):
+class PySvcWCDoc(win32serviceutil.ServiceFramework):
     # you can NET START/STOP the service by the following name
-    _svc_name_ = "PySvc"
-    # this text shows up as the service name in the Service
-    # Control Manager (SCM)
-    _svc_display_name_ = "Python Test Service"
+    _svc_name_ = "PySvcWCDoc"
+    # this text shows up as the service name in the Service Control Manager (SCM)
+    _svc_display_name_ = "Python Service - WC Doc"
     # this text shows up as the description in the SCM
-    _svc_description_ = "This service writes stuff to a file"
+    _svc_description_ = "This service, written in Python, copies WC files to DocRec"
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -22,7 +21,7 @@ class PySvc(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         import servicemanager
 
-        f = open('test.dat', 'w+')
+        f = open('C:/Users/wguo/PycharmProjects/pySvcWCDoc/test.dat', 'w+')
         rc = None
 
         # if the stop event hasn't been fired keep looping
@@ -45,4 +44,4 @@ class PySvc(win32serviceutil.ServiceFramework):
 
 
 if __name__ == '__main__':
-    win32serviceutil.HandleCommandLine(PySvc)
+    win32serviceutil.HandleCommandLine(PySvcWCDoc)

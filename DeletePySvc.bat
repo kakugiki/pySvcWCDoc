@@ -16,11 +16,4 @@ sc delete PySvcWCDoc
 
 :MISSING
 
-REM C:\Users\wguo\PycharmProjects\PySvcWCDoc
-CD %~dp0
-
-python.exe .\PySvcWCDoc.py install
-
-net start PySvcWCDoc 
-
 pause
