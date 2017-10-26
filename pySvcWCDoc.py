@@ -2,14 +2,15 @@ import win32service
 import win32serviceutil
 import win32event
 import configparser
-import os
-import inspect
 import logging
+import time
 import datetime
 import socket
-import usp_appsettings
-from logging.handlers import RotatingFileHandler
-from PyQt4.QtCore import QDir
+import os
+import inspect
+import logging.handlers
+from distutils.dir_util import copy_tree
+
 
 class PySvcWCDoc(win32serviceutil.ServiceFramework):
     _svc_name_ = 'PySvcWCDoc'
@@ -33,7 +34,17 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     _port = _config["default"]["port"]
     _cell = _config["default"]["cell"]
     _sqlcon = _config["connection"]["sqlcon"]
-    _now = datetime.datetime.now()
+    _now = time.strftime("%H:%M")
+    _today = datetime.datetime.now()
+    _logpath = _config["default"]["logpath"] + 'pyLog' + _today.strftime('%Y%m%d') + '.txt'
+
+    handler = logging.handlers.WatchedFileHandler(os.environ.get("LOGFILE", _logpath))
+    formatter = logging.Formatter(logging.BASIC_FORMAT)
+    handler.setFormatter(formatter)
+    root = logging.getLogger()
+    root.setLevel(os.environ.get("LOGLEVEL", "INFO"))
+    root.addHandler(handler)
+
 
     def __init__(self, args):
         win32serviceutil.ServiceFramework.__init__(self, args)
@@ -42,46 +53,45 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
         self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
         socket.setdefaulttimeout(60)
 
-        # logging
-        self.logpath = self._config.get('default', 'logpath') + 'pySvc' + self._now.strftime('%Y%m%d') + '.txt'
-        self._logger = logging.getLogger('pySvcWCDoc')
-        self._logger.setLevel(logging.DEBUG)
-        handler = RotatingFileHandler(self.logpath, maxBytes=4096, backupCount=10)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self._logger.addHandler(handler)
 
         # core logic of the service
-
     def SvcDoRun(self):
         import servicemanager
 
         # p = usp_appsettings.appConfig.getSetting(self, "default", "path")
-        p = self._config["default"]["path"]
-
-        f = open(p, 'w+')
+        #p = self._config["default"]["path"]
+        #f = open(p, 'w+')
         rc = None
 
         # if the stop event hasn't been fired keep looping
         while rc != win32event.WAIT_OBJECT_0:
-            f.write(self._now.strftime('%Y%m%d') + '\n')
-            f.flush()
+            self.CopyPIDocs(self._srcpi, self._tgtpi)
+
+            #f.write(self._now.strftime('%Y%m%d') + '\n')
+            #f.flush()
             # block for 5 seconds and listen for a stop event
             rc = win32event.WaitForSingleObject(self.hWaitStop, 5000)
 
-        f.write('SHUTTING DOWN\n')
-        f.close()
+        #f.write('SHUTTING DOWN\n')
+        #f.close()
+
 
         # called when we're being shut down
-
     def SvcStop(self):
         # tell the SCM we're shutting down
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         # fire the stop event
         win32event.SetEvent(self.hWaitStop)
 
-    def main(self):
-        pass
+
+    def CopyPIDocs(self, src, dst):
+        try:
+            copy_tree(src, dst)
+            logging.info("file copied " + src + " to " + dst)
+            # parallel ??
+        except Exception as e:
+            logging.exception("Error " + e)
+
 
 if __name__ == '__main__':
     win32serviceutil.HandleCommandLine(PySvcWCDoc)
