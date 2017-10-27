@@ -9,10 +9,12 @@ import socket
 import os
 import inspect
 import logging.handlers
+import multiprocessing as mp
 from distutils.dir_util import copy_tree
 
 
 class PySvcWCDoc(win32serviceutil.ServiceFramework):
+    #region Default
     _svc_name_ = 'PySvcWCDoc'
     _svc_display_name_ = 'Python Service - WC Doc'
     _svc_description_ = 'This service, written in Python, copies WC files to DocRec'
@@ -34,16 +36,17 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
     _port = _config["default"]["port"]
     _cell = _config["default"]["cell"]
     _sqlcon = _config["connection"]["sqlcon"]
-    _now = time.strftime("%H:%M")
-    _today = datetime.datetime.now() # need to get an instance of this which will update accordingly?
+    _today = datetime.datetime.now()
     _logpath = _config["default"]["logpath"] + 'pyLog' + _today.strftime('%Y%m%d') + '.txt'
 
     handler = logging.handlers.WatchedFileHandler(os.environ.get("LOGFILE", _logpath))
+    handler = logging.FileHandler(_logpath)
     formatter = logging.Formatter(logging.BASIC_FORMAT)
     handler.setFormatter(formatter)
     root = logging.getLogger()
     root.setLevel(os.environ.get("LOGLEVEL", "INFO"))
     root.addHandler(handler)
+    #endregion
 
 
     def __init__(self, args):
@@ -62,10 +65,13 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
 
         # if the stop event hasn't been fired keep looping
         while rc != win32event.WAIT_OBJECT_0:
-            self.CopyPIDocs(self._srcpi, self._tgtpi)
+            #self.CopyPIDocsTree(self._srcpi, self._tgtpi)
+            self.ParallelCopy(self._srcpi, self._tgtpi)
 
             # block for 5 seconds and listen for a stop event
-            rc = win32event.WaitForSingleObject(self.hWaitStop, 5000)
+            rc = win32event.WaitForSingleObject(self.hWaitStop, 60 * 1000)
+
+        #logging.debug(self._svc_name_)
 
 
         # called when we're being shut down
@@ -76,17 +82,57 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.hWaitStop)
 
 
-    def CopyPIDocs(self, src, dst):
-        logdate = datetime.datetime.now()
+        # copy_tree more useful for exe not windows service
+    def CopyPIDocsTree(self, src, dst):
+        _now = time.strftime("%H:%M")
 
         try:
-            if self._now > self._start and self._now < self._end:
+            if _now > self._start and _now < self._end:
                 copy_tree(src, dst)
 
-                logging.info(logdate.strftime('%Y-%m-%d %H:%M:%S') + " file(s) copied from " + src + " to " + dst)
+                logging.info(self._today.strftime('%Y-%m-%d %H:%M:%S ') + self._svc_name_
+                             + " file(s) copied from " + src + " to " + dst)
+
             # parallel ??
+
+            # check if a file is copied?
         except Exception:
-            logging.exception(logdate.strftime('%Y-%m-%d %H:%M:%S'))
+            logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + self._svc_name_)
+
+
+    def ParallelCopy(self, src, dst):
+        '''
+            allfiles = os.listdir(self._srcpi)
+            # only list the directories and files, but not subdir, and files within
+            allfiles = next(os.walk(self._srcpi))[2] # [] only?
+        '''
+        try:
+            allfiles = self.getFilePaths(self._srcpi)
+
+            logging.info(allfiles)
+        except Exception:
+            logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + self._svc_name_)
+
+    def getFilePaths(self, directory):
+        """
+        This function will generate the file names in a directory
+        tree by walking the tree either top-down or bottom-up. For each
+        directory in the tree rooted at directory top (including top itself),
+        it yields a 3-tuple (dirpath, dirnames, filenames).
+        """
+        file_paths = []  # List which will store all of the full filepaths.
+
+        # Walk the tree.
+        try:
+            for root, directories, files in os.walk(directory):
+                for filename in files:
+                    # Join the two strings in order to form the full filepath.
+                    filepath = os.path.join(root, filename)
+                    file_paths.append(filepath)  # Add it to the list.
+
+            return file_paths
+        except Exception:
+            logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + 'getFilePaths')
 
 
 if __name__ == '__main__':

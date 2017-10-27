@@ -19,7 +19,7 @@ sc delete PySvcWCDoc
 REM C:\Users\wguo\PycharmProjects\PySvcWCDoc
 CD %~dp0
 
-python.exe .\PySvcWCDoc.py install
+python.exe .\PySvcWCDoc.py --startup=delayed install
 
 net start PySvcWCDoc 
 
