@@ -57,7 +57,7 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
         socket.setdefaulttimeout(60)
 
 
-        # core logic of the service
+    # core logic of the service
     def SvcDoRun(self):
         import servicemanager
 
@@ -66,15 +66,16 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
         # if the stop event hasn't been fired keep looping
         while rc != win32event.WAIT_OBJECT_0:
             #self.CopyPIDocsTree(self._srcpi, self._tgtpi)
-            self.ParallelCopy(self._srcpi, self._tgtpi)
+            # self.ParallelCopy(self._srcpi, self._tgtpi)
+            logging.info(self.isCopied(self._srcpi, self._tgtpi))
 
             # block for 5 seconds and listen for a stop event
-            rc = win32event.WaitForSingleObject(self.hWaitStop, 60 * 1000)
+            rc = win32event.WaitForSingleObject(self.hWaitStop, 5 * 60 * 1000)
 
         #logging.debug(self._svc_name_)
 
 
-        # called when we're being shut down
+    # called when we're being shut down
     def SvcStop(self):
         # tell the SCM we're shutting down
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
@@ -82,7 +83,7 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.hWaitStop)
 
 
-        # copy_tree more useful for exe not windows service
+    # copy_tree more useful for exe not windows service
     def CopyPIDocsTree(self, src, dst):
         _now = time.strftime("%H:%M")
 
@@ -107,11 +108,12 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
             allfiles = next(os.walk(self._srcpi))[2] # [] only?
         '''
         try:
-            allfiles = self.getFilePaths(self._srcpi)
+            allfiles = self.isCopied(self._srcpi, self._tgtpi)
 
             logging.info(allfiles)
         except Exception:
             logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + self._svc_name_)
+
 
     def getFilePaths(self, directory):
         """
@@ -130,9 +132,24 @@ class PySvcWCDoc(win32serviceutil.ServiceFramework):
                     filepath = os.path.join(root, filename)
                     file_paths.append(filepath)  # Add it to the list.
 
+                    logging.info(self._today.strftime('%Y-%m-%d %H:%M:%S ') + filepath)
+
             return file_paths
         except Exception:
             logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + 'getFilePaths')
+
+
+    def isCopied(self, src, dst):
+        try:
+            for root, directories, files in os.walk(src):
+                for filename in files:
+                    # srcpath = os.path.join(root, filename)
+                    tgtpath = os.path.join(root.replace(src, dst), filename)
+                    if os.path.exists(tgtpath):
+                        return True
+            logging.info(self._today.strftime('%Y-%m-%d %H:%M:%S ') + tgtpath)
+        except Exception:
+            logging.exception(self._today.strftime('%Y-%m-%d %H:%M:%S ') + 'isCopied')
 
 
 if __name__ == '__main__':
