@@ -15,12 +15,6 @@ ReInstallpySvc.bat
 .gitignore
 venv34/py34 - Shortcut.lnk
 venv34/pyvenv.cfg
-venv34/Lib/site-packages/easy_install.py
-venv34/Lib/site-packages/__pycache__/easy_install.cpython-36.pyc
-venv34/Lib/site-packages/pip/__init__.py
-venv34/Lib/site-packages/pip/__main__.py
-venv34/Lib/site-packages/pip/basecommand.py
-venv34/Lib/site-packages/pip/baseparser.py
-venv34/Lib/site-packages/pip/cmdoptions.py
-venv34/Lib/site-packages/pip/download.py
-venv34/Lib/site-packages/pip/exceptions.py
+venv34/Lib/site-packages/*.py
+venv34/Lib/site-packages/__pycache__/*.pyc
+venv34/Lib/site-packages/pip/*.py
